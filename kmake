@@ -27,8 +27,8 @@ BUILD		?= $(PWD)/build/
 J		?= $(shell grep processor /proc/cpuinfo  | wc -l)
 KERNEL_CMD	:= $(MAKE) -C $(LINUX) ARCH=$(ARCH) O=$(BUILD) -j$(J) INSTALL_MOD_PATH=$(INSTALL_MOD_PATH)
 NOTIFY_CMD	?= notify-send
-# defconfig will also run target config_ext if CONFIG_EXT is set
-CONFIG_EXT	?=
+CONFIG_DISABLE	?=
+CONFIG_ENABLE	?=
 
 KCONFIG		:= $(BUILD)/.config
 
@@ -67,7 +67,10 @@ build-rand: clean randconfig all
 	@$(KERNEL_CMD) $@
 	@$(NOTIFY_CMD) "Kmake: $@ Complete"
 
-kconfig:
+# Default Kernel Configuration
+# This needs to be separate from the general rule
+# so that it does not cause a circular dependancy
+$(KCONFIG):
 ifeq ($(DEFCONFIG),)
 	$(warning "I don't know how to create a default configuration for this kernel")
 	$(warning "Trying 'defconfig'")
@@ -75,16 +78,12 @@ ifeq ($(DEFCONFIG),)
 else
 	$(KERNEL_CMD) $(DEFCONFIG)
 endif
-
-# Default Kernel Configuration
-# This needs to be separate from the general rule and include anything in the
-# command list or empty ; as dependency so that it does not cause a circular
-# dependancy
-ifdef CONFIG_EXT
-$(KCONFIG): kconfig config_ext ;
-else
-$(KCONFIG): kconfig ;
-endif
+	for arch in $(CONFIG_DISABLE) ; do \
+		scripts/config --file $(BUILD).config -k -d "$$arch" ; \
+	done
+	for item in $(CONFIG_ENABLE) ; do \
+		scripts/config --file $(BUILD).config -k -e "$$item" ; \
+	done
 
 ## Copy the current built config to the defconfig
 save_default_config:
