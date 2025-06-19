@@ -67,6 +67,14 @@ build-rand: clean randconfig all
 	@$(KERNEL_CMD) $@
 	@$(NOTIFY_CMD) "Kmake: $@ Complete"
 
+defconfig:
+	for arch in $(CONFIG_DISABLE) ; do \
+		scripts/config --file $(BUILD).config -k -d "$$arch" ; \
+	done
+	for item in $(CONFIG_ENABLE) ; do \
+		scripts/config --file $(BUILD).config -k -e "$$item" ; \
+	done
+
 # Default Kernel Configuration
 # This needs to be separate from the general rule
 # so that it does not cause a circular dependancy
@@ -96,7 +104,7 @@ $(BUILD) $(INSTALL_KERNEL_PATH):
 	@mkdir -p $@
 
 ## Help Make along with the fake rules
-.PHONY: all_local build-rand dump kernel_targets save_default_config
+.PHONY: all_local build-rand defconfig dump kernel_targets save_default_config
 
 # Default rules disabled: Leave this at the bottom of this file
 $(THIS_KMAKE) :: ;
